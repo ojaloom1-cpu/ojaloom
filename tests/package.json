@@ -1,0 +1,7 @@
+{
+  "name": "ojaloom-frontend-tests",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node frontend_dom.mjs" },
+  "devDependencies": { "jsdom": "^26.0.0" }
+}

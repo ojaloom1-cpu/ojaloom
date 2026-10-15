@@ -49,7 +49,7 @@ def main() -> None:
         die("API_BASE must be https. Plain http is only allowed for localhost development")
     origin = f"{u.scheme}://{u.netloc}"
 
-    support = re.sub(r"\D+", "", os.environ.get("SUPPORT_WHATSAPP", "2347074235945"))
+    support = re.sub(r"\D+", "", os.environ.get("SUPPORT_WHATSAPP") or "2347074235945")   # CI passes unset variables as ""
     domain = os.environ.get("FRONTEND_DOMAIN", "").strip().lower()
     if domain and not re.fullmatch(r"[a-z0-9]([a-z0-9.-]*[a-z0-9])?", domain):
         die("FRONTEND_DOMAIN must be a bare domain name such as app.example.com")
