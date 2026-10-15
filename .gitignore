@@ -1,0 +1,12 @@
+# secrets and local state must never be committed
+.env
+*.env
+!.env.example
+ojaloom_data/
+*.db
+*.db-wal
+*.db-shm
+dist/
+node_modules/
+__pycache__/
+*.pyc
