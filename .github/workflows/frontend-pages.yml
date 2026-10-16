@@ -1,0 +1,52 @@
+# Publishes the web app (frontend/) to GitHub Pages. Nothing secret is involved: everything in the built site is public.
+# One-time setup:  repo Settings > Pages > Source = "GitHub Actions"; Settings > Secrets and variables > Actions > Variables:
+#   API_BASE          https://api.example.com        (required)
+#   FRONTEND_DOMAIN   app.example.com                (your custom domain)
+#   SUPPORT_WHATSAPP  2347074235945                  (optional; this is the default)
+name: Deploy web app to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["frontend/**", ".github/workflows/frontend-pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262        # v4
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b  # v5
+      - name: Check the JavaScript parses
+        run: node --check frontend/app.js
+      - name: Build the site
+        env:
+          API_BASE: ${{ vars.API_BASE }}
+          SUPPORT_WHATSAPP: ${{ vars.SUPPORT_WHATSAPP }}
+          FRONTEND_DOMAIN: ${{ vars.FRONTEND_DOMAIN }}
+        run: |
+          if [ -z "$API_BASE" ]; then echo "::error::Set the repository variable API_BASE (for example https://api.example.com)"; exit 1; fi
+          python3 frontend/build.py --out dist
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e      # v4

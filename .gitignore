@@ -10,3 +10,4 @@ dist/
 node_modules/
 __pycache__/
 *.pyc
+deploy/gcp/config.sh

@@ -1,0 +1,13 @@
+# HTTPS for the API. Caddy requests and renews the certificate by itself once the DNS name points at this VM.
+# No access log on purpose: receipt links carry a bearer-style token in the URL path.
+{$API_DOMAIN} {
+	encode zstd gzip
+	request_body {
+		max_size 10MB
+	}
+	reverse_proxy app:8000 {
+		health_uri /health
+		health_interval 30s
+	}
+	header -Server
+}

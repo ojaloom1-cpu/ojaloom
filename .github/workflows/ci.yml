@@ -1,0 +1,63 @@
+# Runs every test on each push and pull request. Needs no secrets and talks to no real Paystack, Meta or Google service.
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  LITESTREAM_VERSION: "0.5.17"
+  LITESTREAM_SHA256: cfb371176d164437ae869f8351cfde49bd1804ae71c61923f75c9cba9c9c006d   # linux x86_64
+
+jobs:
+  backend:
+    name: Backend (Paystack, WhatsApp, CORS, cookies, production guard)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262        # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065    # v5
+        with:
+          python-version: "3.12"
+      - run: python3 tests/test_backend.py
+
+  frontend:
+    name: Web app (runs the built app in a DOM against the real backend)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262        # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065    # v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020      # v4
+        with:
+          node-version: "22"
+      - run: node --check frontend/app.js
+      - run: npm ci --no-audit --no-fund
+        working-directory: tests
+      - run: node frontend_dom.mjs
+        working-directory: tests
+
+  disaster-recovery:
+    name: Database backup and restore drill (real Litestream)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262        # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065    # v5
+        with:
+          python-version: "3.12"
+      - name: Install Litestream (checked against a pinned SHA-256)
+        run: |
+          curl -fsSL -o /tmp/ls.tgz "https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/litestream-${LITESTREAM_VERSION}-linux-x86_64.tar.gz"
+          echo "${LITESTREAM_SHA256}  /tmp/ls.tgz" | sha256sum -c -
+          tar -xzf /tmp/ls.tgz -C /tmp litestream
+      - run: LITESTREAM_BIN=/tmp/litestream bash tests/test_disaster_recovery.sh
+
+  shell-scripts:
+    name: Shell scripts (shellcheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262        # v4
+      - run: shellcheck -S warning deploy/gcp/*.sh deploy/vm/*.sh backend/entrypoint.sh tests/test_disaster_recovery.sh

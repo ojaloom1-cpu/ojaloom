@@ -1,0 +1,7 @@
+# Continuous backup of the SQLite database. The replica is a Google Cloud Storage bucket in production
+# (LITESTREAM_REPLICA_URL=gcs://<bucket>/ojaloom). On Google Cloud the VM's own service account is the credential:
+# there is no key file anywhere.
+dbs:
+  - path: ${OJALOOM_DATA_DIR}/ojaloom.db
+    replica:
+      url: ${LITESTREAM_REPLICA_URL}
