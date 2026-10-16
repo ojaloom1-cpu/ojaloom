@@ -8,7 +8,7 @@ It serves the JSON API, the public receipt / storefront / terms pages and the Pa
 Requirements:
     Python 3.10+ only. No pip packages required.
 
-Run locally (the web app is expected at http://127.0.0.1:5173, see frontend/README.md):
+Run locally (the web app is expected at http://127.0.0.1:5173, see ../README.md):
     python ojaloom_server.py --no-browser
 
 Run in production (behind an HTTPS reverse proxy, see ../docs/DEPLOYMENT.md):

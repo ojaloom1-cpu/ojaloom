@@ -457,6 +457,47 @@ class NoIntegrations(unittest.TestCase):
         self.assertEqual(s, 401, "webhook is closed without a secret")
 
 
+class ProductionBehindProxy(unittest.TestCase):
+    """A correctly configured production server, reached the way Caddy reaches it (X-Forwarded-Proto: https)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.proc, cls.port, cls.data = start_server({
+            "OJALOOM_ENV": "production", "OJALOOM_FRONTEND_URL": "https://app.example.com",
+            "OJALOOM_PUBLIC_API_URL": "https://api.example.com", "OJALOOM_ALLOWED_ORIGINS": "https://app.example.com",
+        }, "--trust-proxy", "--secure-cookies")
+
+    @classmethod
+    def tearDownClass(cls):
+        stop_server(cls.proc, cls.data)
+
+    def _post(self, path, body, origin):
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        conn.request("POST", path, body=json.dumps(body), headers={"Content-Type": "application/json", "Origin": origin, "X-Forwarded-Proto": "https", "X-Forwarded-For": "203.0.113.9"})
+        res = conn.getresponse(); res.read()
+        return res
+
+    def test_cookie_is_secure_and_hsts_is_sent(self):
+        res = self._post("/api/signup", {"email": "p@example.test", "password": "correct horse battery 42", "owner_name": "P", "business_name": "Prod Shop",
+                                         "category": "Fashion & Clothing", "phone": "08030000009", "accept_terms": "1"}, "https://app.example.com")
+        self.assertIn(res.status, (200, 201))
+        cookie = res.getheader("Set-Cookie") or ""
+        for flag in ("Secure", "HttpOnly", "SameSite=Strict"):
+            self.assertIn(flag, cookie)
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        conn.request("GET", "/health", headers={"X-Forwarded-Proto": "https"})
+        res = conn.getresponse(); res.read()
+        self.assertIn("max-age", res.getheader("Strict-Transport-Security") or "")
+
+    def test_localhost_frontend_is_not_trusted_in_production(self):
+        res = self._post("/api/login", {"email": "p@example.test", "password": "x"}, "http://127.0.0.1:5173")
+        self.assertEqual(res.status, 403)
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        conn.request("OPTIONS", "/api/login", headers={"Origin": "http://127.0.0.1:5173", "Access-Control-Request-Method": "POST"})
+        res = conn.getresponse(); res.read()
+        self.assertEqual(res.status, 403)
+
+
 class ProductionGuard(unittest.TestCase):
     """In production the server refuses to start while the setup is unsafe."""
 
