@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # The Oja Loom API: Python standard library only (no pip packages) + Litestream for continuous database backup.
-FROM python:3.12-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 # Litestream is pinned to an exact version AND checked against a SHA-256, so a changed or tampered download fails the build.
 ARG LITESTREAM_VERSION=0.5.17
