@@ -1,7 +1,7 @@
 # Oja Loom: production workspace
 
 The original one-file app (`ojaloom__1_.py`, 7,636 lines) split into a **static web app** for GitHub Pages and an
-**API server** for Google Cloud, with Paystack, WhatsApp support, a Send menu (WhatsApp / Email) and a safe database setup.
+**API server** you can host on Google Cloud or on a small DigitalOcean droplet (no Google needed), with Paystack, WhatsApp support, a Send menu (WhatsApp / Email) and a safe database setup.
 
 ```
 ojaloom/
@@ -15,11 +15,12 @@ ojaloom/
 │  ├─ index.html app.css app.js config.js
 │  └─ build.py              builds dist/ (fills in the API address + CSP, adds cache-busting hashes, writes CNAME)
 ├─ deploy/
+│  ├─ digitalocean/         bootstrap.sh  ssh-keys-only.sh  update.sh  restore-drill.sh  ojaloom-admin.sh  ojaloom.service  Caddyfile  (no Google, no Docker; fits a 512 MB droplet)
 │  ├─ gcp/                  01-setup.sh  02-secrets.sh  03-deploy.sh  startup.sh  (Google Cloud)
 │  └─ vm/                   docker-compose.yml  Caddyfile (automatic HTTPS)  restore-drill.sh
 ├─ .github/workflows/       frontend-pages.yml (deploys the site)   ci.yml (runs every test)
 ├─ tests/                   backend (Python) · web app in a DOM (Node) · disaster-recovery drill (shell)
-├─ docs/                    DEPLOYMENT.md  WHATSAPP.md  SECURITY.md
+├─ docs/                    DEPLOYMENT.md (Google Cloud)  DIGITALOCEAN.md  WHATSAPP.md  SECURITY.md
 └─ backup/                  the untouched original (read-only, SHA-256 recorded) + git bundle of every stage
 ```
 
@@ -65,6 +66,11 @@ environment variable confirmed to be read by the server.
 the Docker build · the `gcloud` scripts · the GitHub Actions workflows · real Paystack calls (only a mock of their documented API was used) ·
 real WhatsApp Cloud API calls (only a mock; template approval is Meta's) · a real browser's share sheet (jsdom has none; behaviour was tested with a stub).
 Each of these has a short "how to check" step in `docs/DEPLOYMENT.md`.
+
+**DigitalOcean setup (`deploy/digitalocean/`).** Run and passing in a sandbox: the 25 backend tests on Python 3.11, 3.12 and 3.13 (Debian 12 and 13) · the
+native service flow (unprivileged user, localhost-only, destroy the data folder, automatic restore) with the real Litestream against an S3-compatible
+stand-in · your original disaster-recovery drill after the one-line `entrypoint.sh` change · the Caddyfile with real Caddy · ShellCheck · the settings validator.
+**Not run:** `bootstrap.sh` on a real Debian droplet (apt, ufw, swap, systemd) · a real Spaces/B2/R2 bucket · a real certificate. Details in `docs/DIGITALOCEAN.md`.
 
 ## Known limits
 

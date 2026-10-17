@@ -1,0 +1,16 @@
+# HTTPS for the API. Caddy gets and renews the certificate by itself once the DNS name points at this droplet.
+# bootstrap.sh replaces __API_DOMAIN__ with the host name from OJALOOM_PUBLIC_API_URL.
+# No access log on purpose: receipt links carry a bearer-style token in the URL path.
+__API_DOMAIN__ {
+	encode zstd gzip
+	request_body {
+		max_size 10MB
+	}
+	# One upstream, so no active health check (it would keep answering 503 for up to 30 s after every API restart).
+	# Instead, if the API is mid-restart, wait up to 10 s for it to come back rather than failing the visitor.
+	reverse_proxy 127.0.0.1:8000 {
+		lb_try_duration 10s
+		lb_try_interval 500ms
+	}
+	header -Server
+}

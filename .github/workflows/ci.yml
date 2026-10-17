@@ -60,4 +60,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262        # v4
-      - run: shellcheck -S warning deploy/gcp/*.sh deploy/vm/*.sh backend/entrypoint.sh tests/test_disaster_recovery.sh
+      - run: shellcheck -S warning deploy/gcp/*.sh deploy/vm/*.sh deploy/digitalocean/*.sh backend/entrypoint.sh tests/test_disaster_recovery.sh

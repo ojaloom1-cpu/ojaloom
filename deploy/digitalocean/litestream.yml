@@ -1,0 +1,10 @@
+# Continuous backup of the SQLite database to ANY S3-compatible bucket:
+# DigitalOcean Spaces, Backblaze B2, Cloudflare R2, Wasabi, and so on.
+# Every value comes from /etc/ojaloom/ojaloom.env, and the two credentials are read by Litestream itself from
+# LITESTREAM_ACCESS_KEY_ID and LITESTREAM_SECRET_ACCESS_KEY. Nothing in this file is secret.
+dbs:
+  - path: ${OJALOOM_DATA_DIR}/ojaloom.db
+    replica:
+      url: ${LITESTREAM_REPLICA_URL}
+      endpoint: ${LITESTREAM_ENDPOINT}
+      region: ${LITESTREAM_REGION}

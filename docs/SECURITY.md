@@ -34,6 +34,22 @@ values bound as SQL parameters, and a private (`0700`/`0600`) database location.
 - [ ] Merge Dependabot pull requests (after the CI is green) so pinned versions do not go stale.
 - [ ] Rotate the Paystack and WhatsApp keys if anyone who knew them leaves, or if you ever suspect exposure (`02-secrets.sh`, then `03-deploy.sh`).
 
+## If you deploy on DigitalOcean instead of Google Cloud
+
+The table above describes the Google Cloud setup. These are the equivalents in `deploy/digitalocean/` and where they are **weaker or untested**:
+
+| Risk | DigitalOcean setup | Honest difference |
+|---|---|---|
+| Secrets | A root-only `0600` file, `/etc/ojaloom/ojaloom.env`, read by systemd before it drops privileges. Never in git | **Weaker than Secret Manager.** Anyone with root on the droplet, or with control of your DigitalOcean account, can read it. Protect both with 2-step verification |
+| Stolen SSH access | SSH key login, `ufw` allows only ssh, 80 and 443 (ssh rate-limited), `bootstrap.sh` warns if password login is still on, and `ssh-keys-only.sh` turns it off once a key is installed (tested against a real OpenSSH server; it refuses to run without a valid key) | **SSH is public** (key-only), unlike Google's IAP tunnel. A DigitalOcean Cloud Firewall limiting port 22 to your own IP is an optional extra |
+| Compromised service | No Docker. A systemd unit runs it as an unprivileged user with `ProtectSystem=strict` (writes only to its data folder), `NoNewPrivileges`, no capabilities, a 360 MB memory cap, and the API bound to `127.0.0.1` | The option set was written from systemd's documentation; **it has not been run under a real systemd** here. Check with `systemd-analyze security ojaloom` |
+| Database lost or corrupted | Litestream to a private bucket you choose (about 1 s behind) · restore drill (`-timestamp` supported) | No automatic disk snapshots. Droplet Backups are optional (extra cost). The bucket is the real backup: turn on versioning or a delete-protection setting if your provider has one |
+| An empty database replacing a good one | Same `entrypoint.sh`, same fail-closed behaviour (tested with the real Litestream) | none |
+| Tampered downloads | Litestream pinned by version and SHA-256 (verified against the real download). Caddy comes from Caddy's official signed package repository | Debian's own packages are trusted as usual |
+| Unpatched system | `unattended-upgrades` installs security updates | A kernel update needs a reboot you do yourself (`reboot`, about a minute) |
+
+Also turn on 2-step verification for DigitalOcean and for whichever service holds the backup bucket.
+
 ## Limits to know about
 
 * **GitHub Pages cannot send HTTP security headers.** The CSP is delivered in a `<meta>` tag, which cannot express `frame-ancestors`, and Pages cannot send

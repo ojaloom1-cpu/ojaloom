@@ -13,7 +13,8 @@ CONFIG="${LITESTREAM_CONFIG:-/etc/litestream.yml}"
 APP="${OJALOOM_APP:-/app/ojaloom_server.py}"
 DB="$DATA_DIR/ojaloom.db"
 
-set -- python3 "$APP" --host 0.0.0.0 --port "${PORT:-8000}" --no-browser --trust-proxy --secure-cookies --data-dir "$DATA_DIR"
+# OJALOOM_HOST defaults to 0.0.0.0 (right inside a container). Without Docker, set it to 127.0.0.1 so only the proxy on the same machine can reach the API.
+set -- python3 "$APP" --host "${OJALOOM_HOST:-0.0.0.0}" --port "${PORT:-8000}" --no-browser --trust-proxy --secure-cookies --data-dir "$DATA_DIR"
 
 if [ -z "${LITESTREAM_REPLICA_URL:-}" ]; then
   if [ "${OJALOOM_ENV:-}" = "production" ] && [ "${OJALOOM_ALLOW_NO_BACKUP:-}" != "1" ]; then

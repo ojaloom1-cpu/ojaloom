@@ -1,5 +1,7 @@
 # Deploying Oja Loom: GitHub Pages (web app) + Google Cloud (API and database)
 
+> **Do not want Google Cloud?** A $4/month DigitalOcean droplet runs the same API with no Google service involved: see [DIGITALOCEAN.md](DIGITALOCEAN.md). The web app side (GitHub Pages, sections 2, 5 and 6 below) is identical.
+
 ```
  customer / shop owner
         │ https

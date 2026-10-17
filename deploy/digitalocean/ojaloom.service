@@ -1,0 +1,46 @@
+[Unit]
+Description=Oja Loom API (Python server under Litestream continuous backup)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ojaloom
+Group=ojaloom
+UMask=0077
+
+# Settings and secrets: root-only file, read by systemd before it drops privileges.
+EnvironmentFile=/etc/ojaloom/ojaloom.env
+Environment=OJALOOM_DATA_DIR=/var/lib/ojaloom
+Environment=OJALOOM_HOST=127.0.0.1
+Environment=PORT=8000
+Environment=OJALOOM_APP=/opt/ojaloom/ojaloom_server.py
+Environment=LITESTREAM_CONFIG=/opt/ojaloom/litestream.yml
+
+# entrypoint.sh: restore the database from the bucket if this machine has none, then run the server under Litestream.
+# It fails closed: if the backup cannot be read it stops instead of creating an empty database.
+ExecStart=/opt/ojaloom/entrypoint.sh
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+
+# Keep a runaway process from starving ssh and Caddy on a 512 MB machine (normal use is under 100 MB).
+MemoryMax=360M
+
+# Sandbox: the service can write only to its own data folder.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ReadWritePaths=/var/lib/ojaloom
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
