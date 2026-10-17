@@ -3,5 +3,5 @@
   "private": true,
   "type": "module",
   "scripts": { "test": "node frontend_dom.mjs" },
-  "devDependencies": { "jsdom": "^26.0.0" }
+  "devDependencies": { "jsdom": "^30.1.2" }
 }
