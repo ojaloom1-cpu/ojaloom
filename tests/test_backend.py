@@ -244,6 +244,32 @@ class FullStack(unittest.TestCase):
         s, _, _ = self.api.req("POST", "/api/customers", body)
         self.assertEqual(s, 201)
 
+    # ---- phone numbers: 11-digit Nigerian mobile numbers only --------------------------------
+    def test_phone_numbers_must_be_11_digit_nigerian_mobile_numbers(self):
+        shop = Client(self.port)  # its own shop, so the shared customers above are untouched
+        shop.signup("phone-rules@example.test", "Phone Rules Ltd")
+        for bad in ["", "0803123456", "080312345678", "06031234567", "08231234567", "abc", "+2348031234", "1234567890"]:
+            s, _, d = shop.req("POST", "/api/customers", {"full_name": "Bad Phone", "phone": bad})
+            self.assertEqual(s, 400, f"customer phone {bad!r} should be refused")
+            self.assertIn("11-digit", str(d))
+        for good in ["08031234567", "0803 123 4567", "+234 803 123 4567", "2348031234567", "09012345678", "07012345678"]:
+            s, _, d = shop.req("POST", "/api/customers", {"full_name": "Good Phone", "phone": good})
+            self.assertEqual(s, 201, f"customer phone {good!r} should be accepted: {d}")
+        _, _, listing = shop.req("GET", "/api/customers")
+        self.assertIn("2348031234567", [c["phone"] for c in listing["items"]], "numbers are stored in the 234... form")
+        # the business phone in Settings follows the same rule, and cannot be left blank
+        for bad in ["", "12345"]:
+            s, _, _ = shop.req("PUT", "/api/business", {"name": "Phone Rules Ltd", "phone": bad})
+            self.assertEqual(s, 400, f"business phone {bad!r} should be refused")
+        s, _, d = shop.req("PUT", "/api/business", {"name": "Phone Rules Ltd", "phone": "0803 123 4567"})
+        self.assertEqual(s, 200, d)
+        # and so does sign-up
+        s, _, d = Client(self.port).req("POST", "/api/signup", {
+            "email": "short-phone@example.test", "password": "correct horse battery 42", "owner_name": "Short Phone",
+            "business_name": "Short Phone Shop", "category": "Fashion & Clothing", "phone": "0803123", "accept_terms": "1"})
+        self.assertEqual(s, 400)
+        self.assertIn("11-digit", str(d))
+
     # ---- data the Send menu relies on --------------------------------------------------------
     def test_lists_carry_customer_email_for_the_send_menu(self):
         self.assertEqual(self.receipts["items"][0]["customer_email"], "chioma@example.test")

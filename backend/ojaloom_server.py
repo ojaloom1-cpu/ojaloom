@@ -340,6 +340,21 @@ def public_phone(value: str | None) -> str:
     return f"+{p}" if p else ""
 
 
+# A Nigerian mobile number is 11 digits, like 08031234567 (070x, 080x, 081x, 090x, 091x).
+NG_MOBILE_RE = re.compile(r"^0[789][01]\d{8}$")
+
+
+def require_ng_phone(value: Any) -> str:
+    """Return the number in the stored 234... form, or raise if it is not an 11-digit Nigerian mobile number.
+    The +234 / 234 way of writing it is accepted too."""
+    digits = PHONE_DIGITS_RE.sub("", str(value or ""))
+    if digits.startswith("234") and len(digits) == 13:
+        digits = "0" + digits[3:]
+    if not NG_MOBILE_RE.match(digits):
+        raise ValueError("Enter an 11-digit Nigerian phone number, like 08031234567.")
+    return normalize_ng_phone(digits)
+
+
 def new_id(prefix: str = "") -> str:
     return prefix + secrets.token_hex(16)
 
@@ -4792,7 +4807,7 @@ class OjaHandler(BaseHTTPRequestHandler):
         owner = require_text(b.get("owner_name"), "Your name", 120)
         business_name = require_text(b.get("business_name"), "Business name", 160)
         category = optional_text(b.get("category"), 120)
-        phone = normalize_ng_phone(require_text(b.get("phone"), "Phone number", 40))
+        phone = require_ng_phone(b.get("phone"))
         if str(b.get("accept_terms") or "").lower() not in ("1", "true", "on", "yes"):
             raise ValueError("Please read and accept the Terms of Service to create your account.")
         ref_code = normalize_referral_code(b.get("referral_code"))
@@ -4927,6 +4942,7 @@ class OjaHandler(BaseHTTPRequestHandler):
 
     def update_business(self, user_id: str, bid: str, b: dict[str, Any]) -> None:
         name = require_text(b.get("name"), "Business name", 160)
+        phone = require_ng_phone(b.get("phone"))
         email = optional_text(b.get("email"), 200)
         if email:
             email = validate_email(email)
@@ -4938,7 +4954,7 @@ class OjaHandler(BaseHTTPRequestHandler):
                 """UPDATE businesses SET name=?,owner_name=?,phone=?,email=?,category=?,description=?,address=?,logo_data=?,
                    receipt_message=?,storefront_enabled=?,allow_negative_inventory=?,updated_at=? WHERE id=?""",
                 (
-                    name, optional_text(b.get("owner_name"), 120), normalize_ng_phone(str(b.get("phone") or "")), email,
+                    name, optional_text(b.get("owner_name"), 120), phone, email,
                     optional_text(b.get("category"), 120), optional_text(b.get("description"), 2500),
                     optional_text(b.get("address"), 500), logo,
                     optional_text(b.get("receipt_message"), 500) or "Thank you for your business.",
@@ -5319,7 +5335,7 @@ class OjaHandler(BaseHTTPRequestHandler):
     def create_customer(self, biz: sqlite3.Row, b: dict[str, Any]) -> None:
         cid, now = new_id("cus_"), iso_now()
         name = require_text(b.get("full_name"), "Customer name", 180)
-        phone = normalize_ng_phone(require_text(b.get("phone"), "Phone", 40))
+        phone = require_ng_phone(b.get("phone"))
         email, address, notes = optional_text(b.get("email"), 200), optional_text(b.get("address"), 500), optional_text(b.get("notes"), 2000)
         with DB_LOCK, db_connect() as conn, transaction(conn, True):
             conn.execute(
@@ -5343,7 +5359,7 @@ class OjaHandler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": True})
             new = {
                 "full_name": require_text(b.get("full_name"), "Customer name", 180),
-                "phone": normalize_ng_phone(require_text(b.get("phone"), "Phone", 40)),
+                "phone": require_ng_phone(b.get("phone")),
                 "email": optional_text(b.get("email"), 200), "address": optional_text(b.get("address"), 500), "notes": optional_text(b.get("notes"), 2000),
             }
             conn.execute(

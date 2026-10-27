@@ -266,6 +266,57 @@ await test('signed in: dashboard loads with the cookie sent cross-origin; suppor
   await closeApp(app);
 });
 
+await test('log out: asks "Are you sure?" first, and Cancel keeps you signed in', async () => {
+  const app = await openApp({ dist: distFull, jar: jarFull });
+  await waitFor(() => app.doc.querySelector('.side, .bnav, nav'), 'the signed-in app shell');
+  app.doc.querySelector('[data-act="logout"]').dispatchEvent(new app.win.MouseEvent('click', { bubbles: true, cancelable: true }));
+  const yes = await waitFor(() => app.doc.querySelector('[data-act="confirm-yes"]'), 'the confirmation box');
+  assert.match(text(app.doc.querySelector('.dlg')), /Are you sure you want to log out/);
+  assert.equal(text(yes), 'Log out');
+  assert.ok(!app.fetchLog.some(l => /\/api\/logout/.test(l.url)), 'nothing is sent until the user confirms');
+  app.doc.querySelector('[data-act="confirm-no"]').dispatchEvent(new app.win.MouseEvent('click', { bubbles: true, cancelable: true }));
+  await waitFor(() => !app.doc.querySelector('[data-act="confirm-yes"]'), 'the box to close');
+  assert.ok(!app.fetchLog.some(l => /\/api\/logout/.test(l.url)), 'still signed in after Cancel');
+  assert.ok(app.doc.querySelector('.side, .bnav, nav'), 'the app is still showing');
+  assert.deepEqual(app.errors, []);
+  await closeApp(app);
+});
+
+await test('log out: confirming in the box signs you out', async () => {
+  const jar = new Map(); // its own shop, so the session the other tests use is not ended
+  const f = makeFetch(jar, () => null);
+  const r = await f(full.base + '/api/signup', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'logout@example.test', password: 'correct horse battery 42', owner_name: 'Log Out', business_name: 'Logout Test Shop', category: 'Fashion & Clothing', phone: '08030000002', accept_terms: '1' }) });
+  assert.ok(r.status < 300, 'signup ' + r.status);
+  const app = await openApp({ dist: distFull, jar });
+  await waitFor(() => app.doc.querySelector('.side, .bnav, nav'), 'the signed-in app shell');
+  app.doc.querySelector('[data-act="logout"]').dispatchEvent(new app.win.MouseEvent('click', { bubbles: true, cancelable: true }));
+  const yes = await waitFor(() => app.doc.querySelector('[data-act="confirm-yes"]'), 'the confirmation box');
+  yes.dispatchEvent(new app.win.MouseEvent('click', { bubbles: true, cancelable: true }));
+  await waitFor(() => app.fetchLog.find(l => /\/api\/logout$/.test(l.url) && l.status === 200), 'the logout request');
+  await waitFor(() => app.doc.querySelector('[data-act="auth"][data-mode="signup"]'), 'the landing page after logging out');
+  assert.deepEqual(app.errors, []);
+  await closeApp(app);
+});
+
+await test('phone fields: tidied to an 11-digit Nigerian number as you type or paste, and anything else is refused', async () => {
+  const app = await openApp({ dist: distFull, jar: new Map() });
+  await waitFor(() => text(app.doc.querySelector('#root')).length > 100, 'landing page');
+  app.doc.querySelector('[data-act="auth"][data-mode="signup"]').dispatchEvent(new app.win.MouseEvent('click', { bubbles: true, cancelable: true }));
+  const ph = await waitFor(() => app.doc.querySelector('#a-phone'), 'the sign-up phone field');
+  const type = v => { ph.value = v; ph.dispatchEvent(new app.win.Event('input', { bubbles: true })); return ph.value; };
+  assert.equal(ph.required, true, 'compulsory');
+  assert.equal(type('+234 803 123 4567'), '08031234567', 'the +234 way of writing it becomes the 11-digit form');
+  assert.equal(type('2348031234567'), '08031234567');
+  assert.equal(type('0803 123 4567'), '08031234567', 'spaces are removed');
+  assert.equal(type('0803-123-45678999'), '08031234567', 'never more than 11 digits');
+  assert.equal(type('abc0803'), '0803', 'letters are dropped');
+  for (const bad of ['', '0803', '08031234', '06031234567', '08231234567']) { type(bad); assert.equal(ph.checkValidity(), false, JSON.stringify(bad) + ' is refused'); }
+  for (const good of ['08031234567', '09012345678', '07012345678', '08112345678']) { type(good); assert.equal(ph.checkValidity(), true, good + ' is accepted'); }
+  assert.deepEqual(app.errors, []);
+  await closeApp(app);
+});
+
 await test('Receipts list: Send button carries ref/email/phone and opens a menu with exactly WhatsApp + Email', async () => {
   const app = await openApp({ dist: distFull, jar: jarFull, hash: '#/receipts' });
   const btn = await openSendMenu(app);
