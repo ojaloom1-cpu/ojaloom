@@ -3998,7 +3998,7 @@ def terms_sections() -> list[tuple[str, list[Any]]]:
         ]),
         ("Plans, trial and payment", [
             ("ul", [
-                "Every new account starts with a 14-day free trial of every feature.",
+                "Every new account starts with a 30-day free trial of every feature.",
                 f"After the trial there is a free plan. It includes up to {FREE_MAX_PRODUCTS} products, {FREE_MAX_ORDERS_PER_MONTH} orders a month, the last {FREE_ACTIVITY_DAYS} days of edit history and reports of up to {FREE_REPORT_DAYS} days.",
                 f"Oja Loom Pro costs {price} for every {PRO_PERIOD_DAYS} days and removes those limits and adds PDF downloads. It does not renew by itself: you pay, or enter an activation code, when you want more time. New days are added on top of any days you have left.",
                 "You can pay through Paystack, or with an activation code from us. Card and bank details are handled by Paystack. We never see or store them.",
@@ -4809,7 +4809,7 @@ class OjaHandler(BaseHTTPRequestHandler):
         bid = new_id("biz_")
         now = iso_now()
         trial_start = utcnow()
-        trial_end = trial_start + dt.timedelta(days=14 + (REFERRED_BONUS_DAYS if referrer else 0))
+        trial_end = trial_start + dt.timedelta(days=30 + (REFERRED_BONUS_DAYS if referrer else 0))
         with DB_LOCK, db_connect() as conn, transaction(conn, True):
             if conn.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
                 raise AppError("An account already exists with that email.", 409)
