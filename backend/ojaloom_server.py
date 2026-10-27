@@ -3998,7 +3998,7 @@ def terms_sections() -> list[tuple[str, list[Any]]]:
         ]),
         ("Plans, trial and payment", [
             ("ul", [
-                "Every new account starts with a 30-day free trial of every feature.",
+                "Every new account starts with a free trial of every feature for 30 days.",
                 f"After the trial there is a free plan. It includes up to {FREE_MAX_PRODUCTS} products, {FREE_MAX_ORDERS_PER_MONTH} orders a month, the last {FREE_ACTIVITY_DAYS} days of edit history and reports of up to {FREE_REPORT_DAYS} days.",
                 f"Oja Loom Pro costs {price} for every {PRO_PERIOD_DAYS} days and removes those limits and adds PDF downloads. It does not renew by itself: you pay, or enter an activation code, when you want more time. New days are added on top of any days you have left.",
                 "You can pay through Paystack, or with an activation code from us. Card and bank details are handled by Paystack. We never see or store them.",
